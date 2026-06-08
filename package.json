@@ -1,0 +1,19 @@
+{
+  "name": "flashnet-fees",
+  "version": "1.0.0",
+  "description": "CLI to check and claim Flashnet integrator fees",
+  "type": "module",
+  "scripts": {
+    "fees": "tsx src/index.ts fees",
+    "claim": "tsx src/index.ts claim"
+  },
+  "dependencies": {
+    "@buildonspark/spark-sdk": "^0.7.13",
+    "@flashnet/sdk": "^0.5.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.0"
+  }
+}
