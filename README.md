@@ -1,6 +1,6 @@
 # flashnet-fees
 
-A tiny CLI to **check** and **claim** the integrator fees accrued by a [Flashnet](https://flashnet.xyz) integrator.
+A tiny CLI to **check** and **claim** the fees a [Flashnet](https://flashnet.xyz) integrator accrues: AMM integrator fees (swaps) and Orchestra affiliate fees (USDC/USDT orders).
 
 Flashnet pays integrators a share of swap fees, but there's no automatic payout — fees accrue per AMM pool and have to be withdrawn explicitly. This tool does that withdrawal in one command.
 
@@ -49,6 +49,41 @@ npm run fees  -- "<your integrator mnemonic>"
 npm run claim -- "<your integrator mnemonic>"
 ```
 
+### Orchestra affiliate fees
+
+[Orchestra](https://docs.flashnet.xyz/orchestra/quickstart) is Flashnet's cross-chain
+USDC/USDT order service. A partner's affiliates earn a share of each order's fee,
+which accrues per settlement bucket (for example USDC on Solana) and is paid out, on
+claim, to the payout address configured for the affiliate in the Orchestra dashboard
+or the partner portal. This is a separate pot from the AMM integrator fees above and
+is read and claimed with the partner's Orchestra **server key** (`fn_...`), not a
+mnemonic.
+
+```bash
+# Earned, paid-out and claimable balances for every affiliate on the account
+npx tsx src/index.ts orchestra-fees "<server key>"
+
+# Claim every claimable bucket to its configured payout address
+npx tsx src/index.ts orchestra-claim "<server key>"
+
+# See what would be claimed without claiming
+npx tsx src/index.ts orchestra-claim "<server key>" --dry-run
+
+# One affiliate only
+npx tsx src/index.ts orchestra-fees "<server key>" --affiliate breez_sdk
+```
+
+The key can also be given as the `ORCHESTRA_SERVER_KEY` environment variable instead
+of an argument, which keeps it out of shell history:
+
+```bash
+ORCHESTRA_SERVER_KEY=fn_... npx tsx src/index.ts orchestra-claim
+```
+
+Buckets under Orchestra's $1 minimum are listed and skipped. Each claim carries an
+idempotency key made of the affiliate, settlement bucket and day, so re-running on
+the same day cannot claim twice. The tool never changes payout addresses or fee settings.
+
 ### `fees` output
 
 ```
@@ -71,6 +106,7 @@ Per pool it prints `accepted`, the withdrawn amount, and a `transferId`. Pools w
 
 ## Security
 
+- The Orchestra server key can read every order on the account and change affiliate payout settings; this tool only reads and claims. Pass it via `ORCHESTRA_SERVER_KEY` rather than as an argument when shell history matters.
 - The mnemonic is passed as a **command-line argument**, never read from a file or env var, and is never written anywhere by this tool. It controls real funds — treat it like a private key. Be aware that CLI args can appear in your shell history and process list.
 - This repo contains no secrets.
 

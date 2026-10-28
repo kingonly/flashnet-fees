@@ -1,11 +1,13 @@
 {
   "name": "flashnet-fees",
   "version": "1.0.0",
-  "description": "CLI to check and claim Flashnet integrator fees",
+  "description": "CLI to check and claim Flashnet AMM integrator fees and Orchestra affiliate fees",
   "type": "module",
   "scripts": {
     "fees": "tsx src/index.ts fees",
-    "claim": "tsx src/index.ts claim"
+    "claim": "tsx src/index.ts claim",
+    "orchestra-fees": "tsx src/index.ts orchestra-fees",
+    "orchestra-claim": "tsx src/index.ts orchestra-claim"
   },
   "dependencies": {
     "@buildonspark/spark-sdk": "^0.7.13",

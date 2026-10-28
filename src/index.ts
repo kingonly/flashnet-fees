@@ -1,18 +1,26 @@
 import { FlashnetClient } from "@flashnet/sdk";
 import { SparkWallet } from "@buildonspark/spark-sdk";
+import { orchestraFees, orchestraClaim } from "./orchestra.js";
 
-const COMMANDS = ["fees", "claim"] as const;
+const COMMANDS = ["fees", "claim", "orchestra-fees", "orchestra-claim"] as const;
 type Command = (typeof COMMANDS)[number];
 
 function usage(): never {
   console.log(`Usage: flashnet-fees <command> <mnemonic>
+       flashnet-fees orchestra-fees  [server-key] [--affiliate <id>]
+       flashnet-fees orchestra-claim [server-key] [--affiliate <id>] [--dry-run]
 
-Commands:
+AMM integrator fees (signed by the integrator wallet):
   fees      Show accrued integrator fees across all pools
   claim     Withdraw all integrator fees to the mnemonic's Spark wallet
 
+Orchestra affiliate fees (USDC/USDT orders; needs the partner server key):
+  orchestra-fees   Show earned, paid-out and claimable balances per affiliate
+  orchestra-claim  Claim every claimable bucket to its configured payout address
+
 Arguments:
-  mnemonic  Your Flashnet integrator mnemonic (quoted string)`);
+  mnemonic    Your Flashnet integrator mnemonic (quoted string)
+  server-key  Orchestra server key (fn_...); or set ORCHESTRA_SERVER_KEY`);
   process.exit(1);
 }
 
@@ -80,15 +88,33 @@ async function claimAll(client: FlashnetClient) {
 
 async function main() {
   const args = process.argv.slice(2);
-  if (args.length < 2) usage();
+  if (args.length < 1) usage();
 
   const command = args[0] as Command;
-  const mnemonic = args.slice(1).join(" ");
 
   if (!COMMANDS.includes(command)) {
     console.error(`Unknown command: ${command}\n`);
     usage();
   }
+
+  if (command === "orchestra-fees" || command === "orchestra-claim") {
+    const flags = args.slice(1);
+    const dryRun = flags.includes("--dry-run");
+    const affIdx = flags.indexOf("--affiliate");
+    const only = affIdx >= 0 ? flags[affIdx + 1] : undefined;
+    const positional = flags.filter((f, i) => !f.startsWith("--") && (affIdx < 0 || i !== affIdx + 1));
+    const key = positional[0] ?? process.env.ORCHESTRA_SERVER_KEY ?? "";
+    if (!/^fn_[A-Za-z0-9_.-]{16,}$/.test(key)) {
+      console.error("Orchestra server key (fn_...) is required, as an argument or ORCHESTRA_SERVER_KEY.\n");
+      usage();
+    }
+    if (command === "orchestra-fees") await orchestraFees(key, only);
+    else await orchestraClaim(key, { dryRun, only });
+    return;
+  }
+
+  if (args.length < 2) usage();
+  const mnemonic = args.slice(1).join(" ");
 
   if (!mnemonic.trim()) {
     console.error("Mnemonic is required.\n");
